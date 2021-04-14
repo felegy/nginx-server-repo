@@ -1,0 +1,209 @@
+server {
+    include         includes/kulcs_settings;
+    include         includes/kulcs_listen_80;
+    server_name     kulcs.hvg.hu;
+
+    error_log       /var/log/nginx/kulcsweb.error.log;
+    
+    proxy_cookie_path ~(.*) "$1; SameSite=None";
+
+    ######################################################################
+    
+    proxy_hide_header       X-HVG-Tracking-Data;
+
+    location / {
+        include                 includes/kulcs_listen_443;
+        proxy_pass              http://$kong_ip:$kong_web_port$request_uri;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header        Host $http_host;
+        proxy_set_header        NginxUserIp $http_REMOTE_ADDR;
+        #proxy_set_header        NginxUserSet $uid_set;
+        #proxy_set_header        NginxUserGot $uid_got;
+        proxy_redirect          off;
+        proxy_intercept_errors  on;
+        error_page              404 = @fallback;
+        access_log              /var/log/nginx/minuterotate/kulcsweb.access.log tracking_template;
+    }
+
+	location ~*^/(customerSupport|userProfile)/.* {
+        include                 includes/kulcs_listen_443;
+        proxy_pass              http://$kong_ip:$kong_web_port$request_uri;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_set_header        Host $http_host;
+		proxy_set_header        NginxUserIp $http_REMOTE_ADDR;
+        proxy_redirect          off;
+		
+		#access_log              /var/log/nginx/minuterotate/gw-api-kulcsweb.access.log tracking_template;
+        access_log              /var/log/nginx/minuterotate/kulcsweb.access.log tracking_template;
+    }
+
+	location ~*^/(api/.*) {
+        include                 includes/kulcs_listen_443;
+        proxy_pass              http://$kong_ip:$kong_web_port$request_uri;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_set_header        Host $http_host;
+		proxy_set_header        NginxUserIp $http_REMOTE_ADDR;
+        proxy_redirect          off;
+
+        access_log              /var/log/nginx/minuterotate/kulcsweb.access.log tracking_template;
+    }
+
+    location ~*^/(eletunk_([^/.]+)_(\d+)){
+        proxy_pass              http://$kulcs_farm_ip:$httpkulcsweb_port/$1;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header        Host $http_host;
+        proxy_redirect          off;
+        proxy_intercept_errors  on;
+        error_page              404 = @fallback;
+        access_log              /var/log/nginx/minuterotate/kulcsweb.access.log tracking_template;
+    }
+
+    location ~*^/(eletunk_jl_edm|eletunk330|hvgallasborzeAB|hvgallasborzeABNO|hvgallasborzeABYES|eletunk600|eletunk970|eletunk468|eletunk660|eletunk728) {
+        proxy_pass              http://$kulcs_farm_ip:$httpkulcsweb_port/$1;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header        Host $http_host;
+        proxy_redirect          off;
+        proxy_intercept_errors  on;
+        error_page              404 = @fallback;
+        access_log              /var/log/nginx/minuterotate/kulcsweb.access.log tracking_template;
+    }
+
+    location ~*^/(notice(.*))
+    {
+        proxy_pass              http://$kulcs_farm_ip:$httpkulcsweb_port/$1;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header        Host $http_host;
+        proxy_redirect          off;
+        proxy_intercept_errors  on;
+        error_page              404 = @fallback;
+        access_log              /var/log/nginx/minuterotate/kulcsweb.access.log tracking_template;
+    }
+
+    location ~*^/op(.*) {
+        include                 includes/kulcs_listen_443;
+        set $dest $1;
+        if ($dest = '') {
+            #return 301 /op/$is_args$args;
+            return 301 https://$http_host/op/$is_args$args;
+        }
+
+        #proxy_pass              http://$kulcs_farm_ip:$kulcsop_port/$dest$is_args$args;
+        proxy_pass              http://$kong_ip:$kong_web_port/op/$dest$is_args$args;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header        Host $http_host;
+        proxy_set_header        NginxUserIp $http_REMOTE_ADDR;
+        proxy_redirect          off;
+        proxy_intercept_errors  on;
+        error_page              404 = @fallback;
+        access_log              /var/log/nginx/minuterotate/kulcsweb.access.log tracking_template;
+    }
+
+    location ~*^/hf(.*) {
+        include                 includes/kulcs_listen_443;
+        set $dest $1;
+        if ($dest = '') {
+            #return 301 /hf/$is_args$args;
+            return 301 https://$http_host/hf/$is_args$args;
+        }
+
+        #proxy_pass              http://$kulcs_farm_ip:$kulcshf_port/hf/$dest$is_args$args;
+        proxy_pass              http://$kong_ip:$kong_web_port/hf/$dest$is_args$args;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header        Host $http_host;
+        proxy_set_header        NginxUserIp $http_REMOTE_ADDR;
+        proxy_redirect          off;
+        proxy_intercept_errors  on;
+        error_page              404 = @fallback;
+        #access_log             /var/log/nginx/minuterotate/kulcsweb.access.log tracking_template;
+    }
+
+    location ~*^/(content|bundles|megrendeles|felhasznalokezeles)(.*){
+        include                 includes/kulcs_listen_443;
+        #proxy_pass              http://$kulcs_farm_ip:$kulcsorder_port/$1$2$is_args$args;
+        proxy_pass              http://$kong_ip:$kong_web_port/$1$2$is_args$args;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header        Host $http_host;
+        proxy_set_header        NginxUserIp $http_REMOTE_ADDR;
+        proxy_redirect          off;
+        proxy_intercept_errors  on;
+        error_page              404 = @fallback;
+        access_log              /var/log/nginx/minuterotate/kulcsorder.access.log tracking_template;
+    }
+
+    location /not-found {
+        #proxy_pass              http://$kulcs_farm_ip:$kulcsweb_port;
+        proxy_pass              http://$kong_ip:$kong_web_port/404.html;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header        Host $http_host;
+        proxy_redirect          off;
+        access_log              /var/log/nginx/minuterotate/kulcsweb.access.log tracking_template;
+    }
+
+    location @fallback {
+        proxy_intercept_errors  off;
+        #return 302 /not-found;
+        return 302 https://$http_host/not-found$is_args$args;
+    }
+}
+
+server {
+    include         includes/kulcs_settings;
+    include         includes/kulcs_listen_80;
+    server_name     wcf.hvgonline.hu;
+
+    access_log      /var/log/nginx/kulcswcf.access.log;
+    error_log       /var/log/nginx/kulcswcf.error.log;
+    #root            /usr/share/nginx/html;
+    #index           index.html index.htm;
+
+    location / {
+        proxy_pass          http://$kulcs_farm_ip:$kulcswcf_port;
+        proxy_set_header    X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header    Host $http_host;
+        proxy_redirect      off;
+    }
+}
+
+server {
+    include         includes/kulcs_settings;
+    include         includes/kulcs_listen_80;
+    include         includes/kulcs_listen_443;
+    server_name     entitlement.hvg.hu;
+    access_log      /var/log/nginx/kulcsentitlementweb.access.log;
+    error_log       /var/log/nginx/kulcsentitlementweb.error.log;
+
+    location / {
+        #return 301 /adobe/$is_args$args;
+        return 301 https://$http_host/adobe/$is_args$args;
+    }
+
+    location ~*^/adobe(.*) {
+        set $dest $1;
+        if ($dest = '')
+        {
+            #return 301 /adobe/$is_args$args;
+            return 301 https://$http_host/adobe/$is_args$args;
+        }
+
+        proxy_pass             http://$kulcs_farm_ip:$kulcsentitlementweb_port/$dest$is_args$args;
+        proxy_set_header       X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_redirect         off;
+        proxy_intercept_errors on;
+        error_page             404 = @fallback;
+    }
+
+    location /not-found {
+        #proxy_pass              http://$kulcs_farm_ip:$kulcsweb_port;
+        proxy_pass              http://$kong_ip:$kong_web_port/404.html;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header        Host $http_host;
+        proxy_redirect          off;
+        access_log              /var/log/nginx/minuterotate/kulcsweb.access.log tracking_template;
+    }
+
+    location @fallback {
+        proxy_intercept_errors off;
+        #return 302 /not-found;
+        return 302 https://$http_host/not-found$is_args$args;
+    }
+}

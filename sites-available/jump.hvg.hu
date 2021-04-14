@@ -1,0 +1,26 @@
+server {
+    include         includes/jumphvghu_settings;
+    include         includes/kulcs_listen_80;
+    server_name     ~^(www\.)?jump\.hvg\.hu;
+
+    error_log       /var/log/nginx/jumphvghu.error.log;
+
+    ######################################################################
+
+    proxy_hide_header       X-HVG-Tracking-Data;
+
+    location / {
+        include                 includes/kulcs_listen_443;
+        proxy_pass              http://$jumphvghu_farm_ip:$jumphvghu_web_port;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header        Host $http_host;
+        proxy_set_header        NginxUserIp $http_REMOTE_ADDR;
+
+        #proxy_set_header        NginxUserSet $uid_set;
+        #proxy_set_header        NginxUserGot $uid_got;
+        proxy_redirect          off;
+        proxy_intercept_errors  on;
+        #error_page              404 = @fallback;
+        access_log             /var/log/nginx/minuterotate/jumphvghu.access.log tracking_template;
+    }
+}

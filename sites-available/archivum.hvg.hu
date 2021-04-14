@@ -1,0 +1,11 @@
+server {
+    include      includes/kulcs_listen_80;
+    server_name  archivum.hvg.hu;
+    access_log   /var/log/nginx/minuterotate/archivum.access.log tracking_template;
+
+    # serve static files
+    location  /  {
+      root    /var/www/archivum;
+      expires 1d;
+    }
+}

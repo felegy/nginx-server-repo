@@ -1,0 +1,3 @@
+excludedfileslist.txt
+nginxdeploy.cmd
+\.git\

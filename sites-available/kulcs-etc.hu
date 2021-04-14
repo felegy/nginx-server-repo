@@ -1,0 +1,148 @@
+server {
+    include             includes/kulcs_settings;
+    include             includes/kulcs_listen_443;
+    include             includes/kulcs_listen_80;
+    server_name         bolt.hvg.hu;
+
+    access_log          /var/log/nginx/minuterotate/bolt.access.log tracking_template;
+    error_log           /var/log/nginx/bolt.error.log;
+
+    ######################################################################
+    
+    proxy_hide_header       X-HVG-Tracking-Data;
+
+    location / {
+        proxy_pass             http://$kulcs_farm_ip:$boltweb_port$request_uri;
+        proxy_set_header       X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header       Host $http_host;
+        proxy_redirect         off;
+        proxy_intercept_errors on;
+        error_page             404 = @fallback;
+    }
+
+    location /not-found {
+        #proxy_pass              http://$kulcs_farm_ip:$kulcsweb_port;
+        proxy_pass              http://$kong_ip:$kong_web_port/404.html;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header        Host $http_host;
+        proxy_redirect          off;
+        access_log              /var/log/nginx/minuterotate/kulcsweb.access.log tracking_template;
+    }
+
+    location @fallback {
+        proxy_intercept_errors off;
+        #return                 302 /not-found;
+        return 302 https://$http_host/not-found$is_args$args;
+    }
+}
+
+server {
+    include             includes/kulcs_settings;
+    include             includes/kulcs_listen_443;
+    include             includes/kulcs_listen_80;
+    server_name         ~^(n-)?pay.(hvg|hvgdev).hu;
+    
+    access_log          /var/log/nginx/pay.access.log;
+    error_log           /var/log/nginx/pay.error.log;
+
+    location / {
+        proxy_pass             http://$pay_farm_ip:$pay_port;
+        proxy_set_header       X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header       Host $http_host;
+        proxy_redirect         off;
+##        proxy_intercept_errors on;
+##        error_page             404 = @fallback;
+    }
+
+    location /not-found {
+        #proxy_pass              http://$kulcs_farm_ip:$kulcsweb_port;
+        proxy_pass              http://$kong_ip:$kong_web_port/404.html;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header        Host $http_host;
+        proxy_redirect          off;
+        access_log              /var/log/nginx/minuterotate/kulcsweb.access.log tracking_template;
+    }
+
+    location @fallback {
+        proxy_intercept_errors  off;
+        #return                  302 /not-found;
+        return 302 https://$http_host/not-found$is_args$args;
+    }
+
+}
+
+server {
+    include             includes/kulcs_listen_80;
+    include             includes/kulcs_settings;
+    
+    include             includes/kulcs_listen_443;
+    server_name         tesztbolt.hvg.hu;
+
+    access_log          /var/log/nginx/tesztbolt.access.log;
+    error_log           /var/log/nginx/tesztbolt.error.log;
+
+    location / {
+        proxy_pass             http://$kulcs_farm_ip:$tesztboltweb_port;
+        proxy_set_header       X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header       Host $http_host;
+        proxy_redirect         off;
+        proxy_intercept_errors on;
+        error_page             404 = @fallback;
+    }
+
+    location /not-found {
+        #proxy_pass              http://$kulcs_farm_ip:$kulcsweb_port;
+        proxy_pass              http://$kong_ip:$kong_web_port/404.html;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header        Host $http_host;
+        proxy_redirect          off;
+        access_log              /var/log/nginx/minuterotate/kulcsweb.access.log tracking_template;
+    }
+
+    location @fallback {
+        proxy_intercept_errors off;
+        #return                 302 /not-found;
+        return 302 https://$http_host/not-found$is_args$args;
+    }
+}
+
+server {
+    include             includes/kulcs_listen_80;
+    include             includes/kulcs_settings;
+    include             includes/kulcs_listen_443;
+    server_name         payment.hvg.hu;
+    
+    access_log          /var/log/nginx/payment.access.log;
+    error_log           /var/log/nginx/payment.error.log;
+
+    location / {
+        proxy_pass             http://$kulcs_farm_ip:$payment_port;
+        proxy_set_header       X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header       Host $http_host;
+        proxy_redirect         off;
+        proxy_intercept_errors on;
+        error_page             404 = @fallback;
+    }
+
+    location /not-found {
+        #proxy_pass              http://$kulcs_farm_ip:$kulcsweb_port;
+        proxy_pass              http://$kong_ip:$kong_web_port/404.html;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header        Host $http_host;
+        proxy_redirect          off;
+        access_log              /var/log/nginx/minuterotate/kulcsweb.access.log tracking_template;
+    }
+
+    location @fallback {
+        proxy_intercept_errors  off;
+        #return                  302 /not-found;
+        return 302 https://$http_host/not-found$is_args$args;
+    }
+}
+
+server {
+    include             includes/kulcs_settings;
+    include             includes/kulcs_listen_80;
+    server_name         ~^(www\.)?(hvgplusz|szakmaikiadvanyok|ugyfelpont\.hvg)\.hu;
+    return              301 https://bolt.hvg.hu/egyebkiadvanyok;
+}
